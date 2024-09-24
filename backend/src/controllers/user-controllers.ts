@@ -17,7 +17,9 @@ export const createUser = async (req: Request, res: Response) => {
 
   const existingUser = await User.findOne({ email });
   if (existingUser) {
-    return res.status(400).json({ message: "emailが既に登録されています。" });
+    return res
+      .status(400)
+      .json({ message: "今のメールアドレスは既に登録されています。" });
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
@@ -37,5 +39,33 @@ export const createUser = async (req: Request, res: Response) => {
     res
       .status(500)
       .json({ message: "新規登録APIにエラーが発生しました。", error });
+  }
+};
+
+export const loginUser = async (req: Request, res: Response) => {
+  const { email, password } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: "emailがまちがいました。" });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "パスワードがまちがいました。" });
+    }
+
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.SECRET_TOKEN as string,
+      { expiresIn: "1h" }
+    );
+
+    res.status(200).json({ token, user: { name: user.name, id: user._id } });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "ログインAPIにエラーになりました。", error });
   }
 };
