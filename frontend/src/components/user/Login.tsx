@@ -9,18 +9,52 @@ interface LoginProps {
 const Login: React.FC<LoginProps> = ({ setIsAuthenticated }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<string[]>([]);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    setErrors([]);
     try {
-      await loginUser(email, password);
-      setIsAuthenticated(true);
-      navigate("/");
+      const userData = await loginUser(email, password);
+
+      if (!userData.type) {
+        setIsAuthenticated(true);
+        navigate("/");
+      } else {
+        if (userData.type === "validation") {
+          setErrors(userData.messages);
+        } else if (userData.type === "custom") {
+          setErrors([userData.message]);
+        } else if (userData.type === "server") {
+          setErrors([userData.message]);
+        }
+      }
     } catch (error: any) {
-      setError("メールアドレスまたはパスワードが間違っています。");
+      setErrors(["メールアドレスまたはパスワードが間違っています。"]);
+    }
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    switch (field) {
+      case "email":
+        setEmail(value);
+        break;
+      case "password":
+        setPassword(value);
+        break;
+      default:
+        break;
+    }
+
+    if (field === "email" && value) {
+      setErrors(
+        errors.filter((error) => error !== "メールアドレスが間違っています。")
+      );
+    } else if (field === "password" && value) {
+      setErrors(
+        errors.filter((error) => error !== "パスワードが間違っています。")
+      );
     }
   };
   return (
@@ -32,20 +66,23 @@ const Login: React.FC<LoginProps> = ({ setIsAuthenticated }) => {
           <input
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
+            onChange={(e) => handleInputChange("email", e.target.value)}
           />
+          {errors.includes("メールアドレスが間違っています。") && (
+            <p>メールアドレスが間違っています。</p>
+          )}
         </div>
         <div>
           <label>パスワード: </label>
           <input
             type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
+            onChange={(e) => handleInputChange("password", e.target.value)}
           />
+          {errors.includes("パスワードが間違っています。") && (
+            <p>パスワードが間違っています。</p>
+          )}
         </div>
-        {error && <p>{error}</p>}
         <button type="submit">ログイン</button>
       </form>
     </div>

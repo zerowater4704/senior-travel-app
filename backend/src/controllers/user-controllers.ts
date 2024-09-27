@@ -1,19 +1,18 @@
 import User from "../modle/User";
 import { Request, Response } from "express";
+import { validationResult } from "express-validator";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import dayjs from "dayjs";
 
 export const createUser = async (req: Request, res: Response) => {
-  const { name, email, password, birthDate, image } = req.body;
+  const errors = validationResult(req);
 
-  const currentYear = dayjs().year();
-  const birthYear = dayjs(birthDate).year();
-  const age = currentYear - birthYear;
-
-  if (age < 50) {
-    return res.status(400).json({ message: "50以上の方しか登録できません。" });
+  if (!errors.isEmpty()) {
+    console.log("Validation errors:", errors.array());
+    return res.status(400).json({ errors: errors.array() });
   }
+  const { name, email, password, birthDate, image } = req.body;
 
   const existingUser = await User.findOne({ email });
   if (existingUser) {
@@ -43,17 +42,24 @@ export const createUser = async (req: Request, res: Response) => {
 };
 
 export const loginUser = async (req: Request, res: Response) => {
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
   const { email, password } = req.body;
 
   try {
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({ message: "emailがまちがいました。" });
+      return res
+        .status(400)
+        .json({ message: "メールアドレスが間違っています。" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: "パスワードがまちがいました。" });
+      return res.status(400).json({ message: "パスワードが間違っています。" });
     }
 
     const token = jwt.sign(
