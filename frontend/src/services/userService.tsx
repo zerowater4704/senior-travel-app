@@ -20,11 +20,20 @@ export const register = async (
 
     return response.data;
   } catch (error: any) {
-    if (error.response && error.response.data && error.response.data.message) {
-      throw error.response.data.message;
+    if (error.response && error.response.data && error.response.data.errors) {
+      // バリデーションエラーが存在する場合
+      const validationErrors = error.response.data.errors;
+      const errorMessages = validationErrors.map((err: any) => err.msg);
+      return { type: "validation", messages: errorMessages };
     }
-    // エラーメッセージがない場合は汎用的なエラーを投げる
-    throw new Error("サーバーエラーが発生しました。");
+
+    if (error.response && error.response.data && error.response.data.message) {
+      // カスタムメッセージが存在する場合
+      return { type: "custom", message: error.response.data.message };
+    }
+
+    // サーバーエラーの場合
+    return { type: "server", message: "サーバーエラーが発生しました。" };
   }
 };
 
@@ -39,6 +48,19 @@ export const loginUser = async (email: string, password: string) => {
       throw new Error("ログインに失敗しました。");
     }
   } catch (error: any) {
-    throw new Error(error.response?.data?.message);
+    if (error.response && error.response.data && error.response.data.errors) {
+      // バリデーションエラーが存在する場合
+      const validationErrors = error.response.data.errors;
+      const errorMessages = validationErrors.map((err: any) => err.msg);
+      return { type: "validation", messages: errorMessages };
+    }
+
+    if (error.response && error.response.data && error.response.data.message) {
+      // カスタムメッセージが存在する場合
+      return { type: "custom", message: error.response.data.message };
+    }
+
+    // サーバーエラーの場合
+    return { type: "server", message: "サーバーエラーが発生しました。" };
   }
 };
